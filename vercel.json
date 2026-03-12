@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "app/api/update-benefits/route.ts": {
+      "maxDuration": 60
+    }
+  }
+}
