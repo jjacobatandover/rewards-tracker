@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import type { CreditCard, Benefit, BenefitCategory } from '@/lib/types';
 import { BenefitItem } from './BenefitItem';
+import { UpdateDiffModal, diffBenefits, type BenefitDiff } from './UpdateDiffModal';
 import {
   getCardStats,
   isBenefitUsed,
@@ -21,6 +22,10 @@ export function CardDetail({ card, onUpdateCard, onDeleteCard }: Props) {
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateMsg, setUpdateMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [filter, setFilter] = useState<'all' | 'unused' | 'used'>('all');
+  const [pendingDiff, setPendingDiff] = useState<{
+    diff: BenefitDiff;
+    incoming: Omit<Benefit, 'id' | 'usage'>[];
+  } | null>(null);
 
   const stats = useMemo(() => getCardStats(card.benefits), [card.benefits]);
 
@@ -92,24 +97,11 @@ export function CardDetail({ card, onUpdateCard, onDeleteCard }: Props) {
         return;
       }
 
-      // Merge fetched benefits with existing ones, preserving usage history
-      const existingUsageMap = Object.fromEntries(card.benefits.map((b) => [b.name.toLowerCase(), b.usage]));
+      // Show diff for user confirmation before applying
+      const diff = diffBenefits(card.benefits, data.benefits);
+      setPendingDiff({ diff, incoming: data.benefits });
 
-      const mergedBenefits: Benefit[] = data.benefits.map(
-        (b: Omit<Benefit, 'id' | 'usage'>) => ({
-          ...b,
-          id: crypto.randomUUID(),
-          usage: existingUsageMap[b.name.toLowerCase()] ?? [],
-        })
-      );
-
-      onUpdateCard({
-        ...card,
-        benefits: mergedBenefits,
-        lastUpdated: new Date().toISOString(),
-      });
-
-      setUpdateMsg({ type: 'success', text: `Updated! Found ${data.count} benefits.` });
+      setUpdateMsg({ type: 'success', text: `Review ${data.count} benefits — confirm changes below.` });
     } catch (err) {
       setUpdateMsg({ type: 'error', text: 'Network error. Make sure ANTHROPIC_API_KEY is set.' });
     } finally {
@@ -118,13 +110,34 @@ export function CardDetail({ card, onUpdateCard, onDeleteCard }: Props) {
     }
   }
 
+  function handleApplyDiff() {
+    if (!pendingDiff) return;
+    const existingUsageMap = Object.fromEntries(card.benefits.map((b) => [b.name.toLowerCase(), b.usage]));
+    const mergedBenefits: Benefit[] = pendingDiff.incoming.map((b) => ({
+      ...b,
+      id: crypto.randomUUID(),
+      usage: existingUsageMap[b.name.toLowerCase()] ?? [],
+    }));
+    onUpdateCard({ ...card, benefits: mergedBenefits, lastUpdated: new Date().toISOString() });
+    setPendingDiff(null);
+    setUpdateMsg({ type: 'success', text: `Benefits updated.` });
+    setTimeout(() => setUpdateMsg(null), 3000);
+  }
+
   const netValue = stats.usedValue - card.annualFee;
   const pctUsed = stats.totalValue > 0 ? Math.min(100, (stats.usedValue / stats.totalValue) * 100) : 0;
 
+  const unusedCount = card.benefits.filter((b) => !isBenefitUsed(b) && b.value > 0).length;
+  const usedCount = card.benefits.filter((b) => isBenefitUsed(b)).length;
+
   return (
+    <>
     <div className="flex flex-col h-full overflow-hidden">
       {/* Card header */}
-      <div className="p-5 border-b border-[#2a2a2a]">
+      <div className="border-b border-[#2a2a2a]">
+        {/* Color strip */}
+        <div className="h-1 w-full" style={{ backgroundColor: card.color }} />
+        <div className="p-5">
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
@@ -222,27 +235,35 @@ export function CardDetail({ card, onUpdateCard, onDeleteCard }: Props) {
             </div>
             <div className="h-1.5 bg-[#2a2a2a] rounded-full overflow-hidden">
               <div
-                className="h-full bg-amber-500 rounded-full transition-all"
-                style={{ width: `${pctUsed}%` }}
+                className="h-full rounded-full transition-all"
+                style={{ width: `${pctUsed}%`, backgroundColor: card.color }}
               />
             </div>
           </div>
         )}
+        </div>
       </div>
 
       {/* Filter tabs */}
       <div className="flex gap-1 px-5 py-3 border-b border-[#2a2a2a]">
-        {(['all', 'unused', 'used'] as const).map((f) => (
+        {([
+          { key: 'all', label: 'All', count: card.benefits.length },
+          { key: 'unused', label: 'Unused', count: unusedCount },
+          { key: 'used', label: 'Used', count: usedCount },
+        ] as const).map(({ key, label, count }) => (
           <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`text-xs px-3 py-1 rounded-md capitalize transition-colors ${
-              filter === f
+            key={key}
+            onClick={() => setFilter(key)}
+            className={`text-xs px-3 py-1 rounded-md transition-colors flex items-center gap-1.5 ${
+              filter === key
                 ? 'bg-[#2a2a2a] text-white'
                 : 'text-gray-500 hover:text-gray-300'
             }`}
           >
-            {f}
+            {label}
+            <span className={`text-[10px] ${filter === key ? 'text-gray-400' : 'text-gray-600'}`}>
+              {count}
+            </span>
           </button>
         ))}
       </div>
@@ -272,6 +293,16 @@ export function CardDetail({ card, onUpdateCard, onDeleteCard }: Props) {
         )}
       </div>
     </div>
+
+    {pendingDiff && (
+      <UpdateDiffModal
+        cardName={card.name}
+        diff={pendingDiff.diff}
+        onConfirm={handleApplyDiff}
+        onCancel={() => setPendingDiff(null)}
+      />
+    )}
+    </>
   );
 }
 

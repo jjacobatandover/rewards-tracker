@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import type { CreditCard } from '@/lib/types';
 import { loadCards, saveCards } from '@/lib/storage';
 import { CardSidebar } from '@/components/CardSidebar';
@@ -12,23 +12,68 @@ export default function Home() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [kvAvailable, setKvAvailable] = useState(false);
+  const [lastCronRan, setLastCronRan] = useState<string | null>(null);
+  const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isInitialLoad = useRef(true);
 
-  // Hydrate from localStorage
   useEffect(() => {
-    const loaded = loadCards();
-    setCards(loaded);
-    if (loaded.length > 0) setSelectedId(loaded[0].id);
-    setMounted(true);
+    async function init() {
+      let loaded: CreditCard[] = [];
+      try {
+        const res = await fetch('/api/cards');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.kvAvailable && Array.isArray(data.cards) && data.cards.length > 0) {
+            loaded = data.cards;
+            setKvAvailable(true);
+            saveCards(loaded);
+          } else if (data.kvAvailable) {
+            setKvAvailable(true);
+            const local = loadCards();
+            if (local.length > 0) {
+              loaded = local;
+              await fetch('/api/cards', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cards: local }),
+              });
+            }
+          }
+        }
+      } catch { /* fallback to local */ }
+
+      if (loaded.length === 0) loaded = loadCards();
+
+      setCards(loaded);
+      if (loaded.length > 0) setSelectedId(loaded[0].id);
+      setMounted(true);
+      isInitialLoad.current = false;
+    }
+    init();
   }, []);
 
-  // Persist on change
-  useEffect(() => {
-    if (mounted) saveCards(cards);
-  }, [cards, mounted]);
+  const syncToServer = useCallback((updatedCards: CreditCard[]) => {
+    if (!kvAvailable) return;
+    if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+    syncTimeoutRef.current = setTimeout(() => {
+      fetch('/api/cards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cards: updatedCards }),
+      }).catch(() => {});
+    }, 1500);
+  }, [kvAvailable]);
 
-  function handleAddCard(card: CreditCard) {
-    setCards((prev) => [...prev, card]);
-    setSelectedId(card.id);
+  useEffect(() => {
+    if (!mounted || isInitialLoad.current) return;
+    saveCards(cards);
+    syncToServer(cards);
+  }, [cards, mounted, syncToServer]);
+
+  function handleAddCard(newCards: CreditCard[]) {
+    setCards((prev) => [...prev, ...newCards]);
+    if (newCards.length > 0) setSelectedId(newCards[0].id);
   }
 
   function handleUpdateCard(updated: CreditCard) {
@@ -38,7 +83,7 @@ export default function Home() {
   function handleDeleteCard(id: string) {
     setCards((prev) => {
       const next = prev.filter((c) => c.id !== id);
-      if (selectedId === id) setSelectedId(next[0]?.id ?? null);
+      if (selectedId === id) setSelectedId(next.length > 0 ? next[0].id : null);
       return next;
     });
   }
@@ -47,8 +92,11 @@ export default function Home() {
 
   if (!mounted) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+      <div className="flex h-screen items-center justify-center bg-[#0a0a0a]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs text-gray-500">Loading your cards…</p>
+        </div>
       </div>
     );
   }
@@ -71,12 +119,21 @@ export default function Home() {
         </div>
 
         <div className="flex items-center gap-4">
-          {cards.length > 0 && (
-            <div className="text-right">
-              <p className="text-xs text-gray-500">
-                {cards.length} card{cards.length !== 1 ? 's' : ''}
-              </p>
+          {kvAvailable ? (
+            <div className="flex items-center gap-1.5" title="Auto-updates active (Vercel KV + daily cron)">
+              <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
+              <span className="text-xs text-gray-500">
+                {lastCronRan ? `Auto-updated ${new Date(lastCronRan).toLocaleDateString()}` : 'Auto-updates active'}
+              </span>
             </div>
+          ) : (
+            <div className="flex items-center gap-1.5" title="Add KV env vars to enable server-side auto-updates">
+              <div className="w-1.5 h-1.5 rounded-full bg-gray-600" />
+              <span className="text-xs text-gray-600">Local only</span>
+            </div>
+          )}
+          {cards.length > 0 && (
+            <span className="text-xs text-gray-500">{cards.length} card{cards.length !== 1 ? 's' : ''}</span>
           )}
           <button
             onClick={() => setShowAddModal(true)}
@@ -95,18 +152,12 @@ export default function Home() {
         <CardSidebar
           cards={cards}
           selectedId={selectedId}
-          onSelect={setSelectedId}
+          onSelectId={setSelectedId}
           onAddCard={() => setShowAddModal(true)}
         />
 
         <main className="flex-1 overflow-hidden">
-          {selectedCard ? (
-            <CardDetail
-              card={selectedCard}
-              onUpdateCard={handleUpdateCard}
-              onDeleteCard={handleDeleteCard}
-            />
-          ) : (
+          {!selectedCard ? (
             <div className="flex flex-col items-center justify-center h-full text-center px-8">
               <div className="w-16 h-16 rounded-full bg-[#1a1a1a] border border-[#2a2a2a] flex items-center justify-center mb-4">
                 <svg className="w-8 h-8 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -114,20 +165,32 @@ export default function Home() {
                   <path d="M2 10h20" strokeLinecap="round" />
                 </svg>
               </div>
-              <h2 className="text-base font-medium text-gray-300">No cards yet</h2>
+              <h2 className="text-base font-medium text-gray-300">
+                {cards.length === 0 ? 'No cards yet' : 'Select a card'}
+              </h2>
               <p className="text-sm text-gray-500 mt-1 max-w-xs">
-                Add your credit cards to track perks, credits, and benefits for you and your spouse.
+                {cards.length === 0
+                  ? 'Add your credit cards to track perks and credits.'
+                  : 'Pick a card from the sidebar.'}
               </p>
-              <button
-                onClick={() => setShowAddModal(true)}
-                className="mt-5 flex items-center gap-2 text-sm px-4 py-2 rounded-lg bg-amber-500 text-black font-medium hover:bg-amber-400 transition-colors"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M12 5v14M5 12h14" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                Add Your First Card
-              </button>
+              {cards.length === 0 && (
+                <button
+                  onClick={() => setShowAddModal(true)}
+                  className="mt-5 flex items-center gap-2 text-sm px-4 py-2 rounded-lg bg-amber-500 text-black font-medium hover:bg-amber-400 transition-colors"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M12 5v14M5 12h14" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  Add Your First Card
+                </button>
+              )}
             </div>
+          ) : (
+            <CardDetail
+              card={selectedCard}
+              onUpdateCard={handleUpdateCard}
+              onDeleteCard={handleDeleteCard}
+            />
           )}
         </main>
       </div>

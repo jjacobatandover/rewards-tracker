@@ -1,7 +1,7 @@
 'use client';
 
 import { Benefit } from '@/lib/types';
-import { isBenefitUsed, getCurrentPeriod, formatCurrency, CATEGORY_LABELS, CATEGORY_COLORS } from '@/lib/utils';
+import { isBenefitUsed, getCurrentPeriod, formatCurrency } from '@/lib/utils';
 
 interface Props {
   benefit: Benefit;
@@ -14,11 +14,15 @@ export function BenefitItem({ benefit, onToggle }: Props) {
   const freqLabel =
     benefit.frequency === 'monthly' ? '/mo' : benefit.frequency === 'annual' ? '/yr' : ' (one-time)';
 
+  const usedEntry = used
+    ? benefit.usage.find((u) => u.period === getCurrentPeriod(benefit.frequency))
+    : null;
+
   return (
     <div
       className={`flex items-start gap-3 p-3 rounded-lg border transition-all ${
         used
-          ? 'border-[#2a2a2a] bg-[#111] opacity-60'
+          ? 'border-[#222] bg-[#111] opacity-55'
           : 'border-[#2a2a2a] bg-[#1a1a1a] hover:border-[#3a3a3a]'
       }`}
     >
@@ -46,17 +50,23 @@ export function BenefitItem({ benefit, onToggle }: Props) {
             {benefit.name}
           </span>
           {benefit.value > 0 && (
-            <span className="text-xs font-semibold text-amber-400 bg-amber-900/20 border border-amber-700/30 px-2 py-0.5 rounded-full">
+            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+              used
+                ? 'text-gray-500 bg-transparent border border-[#333]'
+                : 'text-amber-400 bg-amber-900/20 border border-amber-700/30'
+            }`}>
               {formatCurrency(benefit.value)}{freqLabel}
             </span>
           )}
-          <span className={`text-xs px-2 py-0.5 rounded-full ${CATEGORY_COLORS[benefit.category]}`}>
-            {CATEGORY_LABELS[benefit.category]}
-          </span>
         </div>
         <p className={`text-xs mt-0.5 ${used ? 'text-gray-600' : 'text-gray-400'}`}>
           {benefit.description}
         </p>
+        {usedEntry && (
+          <p className="text-[10px] text-gray-600 mt-1">
+            Used {new Date(usedEntry.usedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          </p>
+        )}
       </div>
     </div>
   );
