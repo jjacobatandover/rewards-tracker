@@ -27,7 +27,8 @@ function LoginForm() {
       if (res.ok) {
         router.replace(from);
       } else {
-        setError('Incorrect password.');
+        const data = await res.json().catch(() => ({}));
+        setError(data.error ?? 'Incorrect password.');
       }
     } catch {
       setError('Something went wrong. Please try again.');
