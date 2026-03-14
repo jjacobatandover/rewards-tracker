@@ -13,7 +13,6 @@ export default function Home() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [kvAvailable, setKvAvailable] = useState(false);
-  const [lastCronRan, setLastCronRan] = useState<string | null>(null);
   const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isInitialLoad = useRef(true);
 
@@ -119,17 +118,10 @@ export default function Home() {
         </div>
 
         <div className="flex items-center gap-4">
-          {kvAvailable ? (
-            <div className="flex items-center gap-1.5" title="Auto-updates active (Vercel KV + daily cron)">
+          {kvAvailable && (
+            <div className="flex items-center gap-1.5" title="Synced across devices via Vercel KV">
               <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
-              <span className="text-xs text-gray-500">
-                {lastCronRan ? `Auto-updated ${new Date(lastCronRan).toLocaleDateString()}` : 'Auto-updates active'}
-              </span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1.5" title="Add KV env vars to enable server-side auto-updates">
-              <div className="w-1.5 h-1.5 rounded-full bg-gray-600" />
-              <span className="text-xs text-gray-600">Local only</span>
+              <span className="text-xs text-gray-500">Synced</span>
             </div>
           )}
           {cards.length > 0 && (

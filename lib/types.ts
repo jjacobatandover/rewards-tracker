@@ -44,5 +44,6 @@ export interface CardTemplate {
   annualFee: number;
   color: string;
   officialBenefitsUrl: string;
+  benefitsUpdated?: string; // ISO date — set by scripts/update-benefits.mjs
   benefits: Omit<Benefit, 'id' | 'usage'>[];
 }

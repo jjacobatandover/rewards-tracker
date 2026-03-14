@@ -1,16 +1,7 @@
 {
   "functions": {
-    "app/api/update-benefits/route.ts": {
-      "maxDuration": 60
-    },
-    "app/api/cron/update-next/route.ts": {
-      "maxDuration": 60
+    "app/api/cards/route.ts": {
+      "maxDuration": 10
     }
-  },
-  "crons": [
-    {
-      "path": "/api/cron/update-next",
-      "schedule": "0 9 * * *"
-    }
-  ]
+  }
 }

@@ -43,6 +43,17 @@ export async function GET(req: NextRequest) {
     return ta - tb; // oldest first
   })[0];
 
+  // Skip if the stalest card was updated within the last 30 days
+  const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+  const lastUpdatedMs = card.lastUpdated ? new Date(card.lastUpdated).getTime() : 0;
+  if (lastUpdatedMs && Date.now() - lastUpdatedMs < THIRTY_DAYS_MS) {
+    return NextResponse.json({
+      skipped: true,
+      reason: `All cards updated within 30 days. Next due: ${card.name}`,
+      nextDue: card.lastUpdated,
+    });
+  }
+
   // --- Fetch benefits via Claude ---
   const systemPrompt = `You are a credit card benefits researcher. Fetch the official benefits page and return ONLY a JSON array of benefits — no markdown, no explanation. Each item must have exactly these fields:
 - name: string
