@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { verifyToken } from '@/lib/auth-token';
 
 const PUBLIC_PATHS = ['/login', '/api/auth'];
 
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Allow public paths through
@@ -10,13 +11,15 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  const token = req.cookies.get('auth_token')?.value;
   const secret = process.env.AUTH_SECRET;
 
   // If no secret is set, skip auth (local dev without env var)
   if (!secret) return NextResponse.next();
 
-  if (token === secret) return NextResponse.next();
+  const token = req.cookies.get('auth_token')?.value ?? '';
+  const valid = token ? await verifyToken(token, secret) : false;
+
+  if (valid) return NextResponse.next();
 
   const loginUrl = req.nextUrl.clone();
   loginUrl.pathname = '/login';
