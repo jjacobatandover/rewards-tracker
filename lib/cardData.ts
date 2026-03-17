@@ -332,9 +332,14 @@ export const CARD_TEMPLATES: CardTemplate[] = [
         value: 360, frequency: 'annual', category: 'other',
       },
       {
-        name: '$200 Semi-Annual Dell Credit',
-        description: 'Up to $200 per semi-annual period ($400/yr) in statement credits for Dell Technologies purchases.',
-        value: 400, frequency: 'annual', category: 'shopping',
+        name: '$150 Dell Technologies Credit',
+        description: 'Up to $150 back per calendar year in statement credits on U.S. Dell Technologies purchases. Enrollment required.',
+        value: 150, frequency: 'annual', category: 'shopping',
+      },
+      {
+        name: '$1,000 Dell Technologies Spend Bonus',
+        description: 'Spend $5,000+ directly with Dell Technologies in a calendar year and receive a $1,000 statement credit. Enrollment required.',
+        value: 1000, frequency: 'annual', category: 'shopping',
       },
       {
         name: '$150 Annual Adobe Credit',
