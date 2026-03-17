@@ -698,11 +698,6 @@ export const CARD_TEMPLATES: CardTemplate[] = [
         description: 'Up to $100 for Global Entry or $85 for TSA PreCheck.',
         value: 100, frequency: 'once', category: 'travel',
       },
-      {
-        name: '$100 Alaska Airlines Credit',
-        description: 'Up to $100 in statement credits for Alaska Airlines purchases annually.',
-        value: 100, frequency: 'annual', category: 'travel',
-      },
     ],
   },
   {
