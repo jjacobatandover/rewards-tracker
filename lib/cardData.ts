@@ -531,7 +531,7 @@ export const CARD_TEMPLATES: CardTemplate[] = [
       {
         name: 'First Checked Bag Free',
         description: 'First checked bag free for you and up to 3 travel companions on the same JetBlue itinerary.',
-        value: 90, frequency: 'annual', category: 'travel',
+        value: 0, frequency: 'annual', category: 'travel',
       },
       {
         name: '50% Inflight Savings',
@@ -593,7 +593,7 @@ export const CARD_TEMPLATES: CardTemplate[] = [
       {
         name: 'Free Checked Bag',
         description: 'First checked bag free on Hawaiian Airlines flights for the cardholder.',
-        value: 60, frequency: 'annual', category: 'travel',
+        value: 0, frequency: 'annual', category: 'travel',
       },
     ],
   },
@@ -612,7 +612,7 @@ export const CARD_TEMPLATES: CardTemplate[] = [
       {
         name: 'Free Checked Bag',
         description: 'First checked bag free on Hawaiian Airlines flights for the cardholder.',
-        value: 60, frequency: 'annual', category: 'travel',
+        value: 0, frequency: 'annual', category: 'travel',
       },
     ],
   },
@@ -626,7 +626,7 @@ export const CARD_TEMPLATES: CardTemplate[] = [
       {
         name: 'First Checked Bag Free',
         description: 'First checked bag free for cardholder and up to 4 travel companions on the same itinerary.',
-        value: 240, frequency: 'annual', category: 'travel',
+        value: 0, frequency: 'annual', category: 'travel',
       },
       {
         name: 'Preferred Boarding',
@@ -662,7 +662,7 @@ export const CARD_TEMPLATES: CardTemplate[] = [
       {
         name: 'Free Checked Bag',
         description: 'First checked bag free for cardholder and up to 6 guests on the same reservation.',
-        value: 180, frequency: 'annual', category: 'travel',
+        value: 0, frequency: 'annual', category: 'travel',
       },
     ],
   },
@@ -681,12 +681,12 @@ export const CARD_TEMPLATES: CardTemplate[] = [
       {
         name: 'Alaska Lounge+ Membership',
         description: 'Complimentary Alaska Lounge+ membership with unlimited lounge visits.',
-        value: 450, frequency: 'annual', category: 'travel',
+        value: 0, frequency: 'annual', category: 'travel',
       },
       {
         name: 'Free Checked Bags',
         description: 'First and second checked bags free for cardholder and up to 6 guests.',
-        value: 300, frequency: 'annual', category: 'travel',
+        value: 0, frequency: 'annual', category: 'travel',
       },
       {
         name: 'Global Entry / TSA PreCheck Credit',
@@ -736,7 +736,7 @@ export const CARD_TEMPLATES: CardTemplate[] = [
       {
         name: 'First Checked Bag Free',
         description: 'Free first checked bag for cardholder and up to 4 travel companions on the same itinerary.',
-        value: 240, frequency: 'annual', category: 'travel',
+        value: 0, frequency: 'annual', category: 'travel',
       },
       {
         name: 'Preferred Boarding',
@@ -765,7 +765,7 @@ export const CARD_TEMPLATES: CardTemplate[] = [
       {
         name: 'First Checked Bag Free',
         description: 'Free first checked bag for cardholder and up to 4 travel companions on the same itinerary.',
-        value: 240, frequency: 'annual', category: 'travel',
+        value: 0, frequency: 'annual', category: 'travel',
       },
       {
         name: 'Preferred Boarding',
