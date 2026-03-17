@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { CreditCard } from '@/lib/types';
+import type { CreditCard, Settings } from '@/lib/types';
 import { getCardStats, formatCurrency } from '@/lib/utils';
 
 type Filter = 'all' | 'me' | 'spouse';
@@ -11,13 +11,14 @@ interface Props {
   selectedId: string | null;
   onSelectId: (id: string) => void;
   onAddCard: () => void;
+  settings: Settings;
 }
 
-export function CardSidebar({ cards, selectedId, onSelectId, onAddCard }: Props) {
+export function CardSidebar({ cards, selectedId, onSelectId, onAddCard, settings }: Props) {
   const [filter, setFilter] = useState<Filter>('all');
 
-  const meCards = cards.filter((c) => c.holder === 'me' || c.holder === 'both');
-  const spouseCards = cards.filter((c) => c.holder === 'spouse' || c.holder === 'both');
+  const meCards = cards.filter((c) => c.holder === 'me');
+  const spouseCards = cards.filter((c) => c.holder === 'spouse');
 
   const visibleCards = (
     filter === 'me' ? meCards :
@@ -48,7 +49,7 @@ export function CardSidebar({ cards, selectedId, onSelectId, onAddCard }: Props)
                 filter === f ? 'bg-[#2a2a2a] text-white' : 'text-gray-500 hover:text-gray-300'
               }`}
             >
-              {f === 'me' ? 'Me' : f === 'spouse' ? 'Spouse' : 'All'}
+              {f === 'me' ? settings.p1Name : f === 'spouse' ? settings.p2Name : 'All'}
               {counts[f] > 0 && (
                 <span className="ml-1 text-[10px] text-gray-500">{counts[f]}</span>
               )}
@@ -88,7 +89,7 @@ export function CardSidebar({ cards, selectedId, onSelectId, onAddCard }: Props)
                   </div>
                   <div className="mt-1.5 flex items-center justify-between pl-3.5">
                     <span className="text-xs text-gray-500">
-                      {card.holder === 'both' ? 'Both' : card.holder === 'spouse' ? 'Spouse' : 'Me'}
+                      {card.holder === 'spouse' ? settings.p2Name : settings.p1Name}
                       {card.lastFourDigits ? ` ···· ${card.lastFourDigits}` : ''}
                     </span>
                     {stats.remainingValue > 0 && (

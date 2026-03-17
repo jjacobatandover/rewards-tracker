@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import type { CreditCard, Benefit, BenefitCategory } from '@/lib/types';
+import type { CreditCard, Benefit, BenefitCategory, Settings } from '@/lib/types';
 import { BenefitItem } from './BenefitItem';
 import {
   getCardStats,
@@ -13,11 +13,12 @@ import {
 
 interface Props {
   card: CreditCard;
+  settings: Settings;
   onUpdateCard: (card: CreditCard) => void;
   onDeleteCard: (cardId: string) => void;
 }
 
-export function CardDetail({ card, onUpdateCard, onDeleteCard }: Props) {
+export function CardDetail({ card, settings, onUpdateCard, onDeleteCard }: Props) {
   const [filter, setFilter] = useState<'all' | 'unused' | 'used'>('all');
 
   const stats = useMemo(() => getCardStats(card.benefits), [card.benefits]);
@@ -80,7 +81,7 @@ export function CardDetail({ card, onUpdateCard, onDeleteCard }: Props) {
               <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-400">
                 <span>{card.issuer}</span>
                 <span>·</span>
-                <span className="capitalize">{card.holder === 'spouse' ? 'Spouse' : card.holder === 'both' ? 'Both' : 'Me'}</span>
+                <span>{card.holder === 'spouse' ? settings.p2Name : settings.p1Name}</span>
                 {card.lastFourDigits && (
                   <>
                     <span>·</span>

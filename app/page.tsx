@@ -1,16 +1,19 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { CreditCard } from '@/lib/types';
-import { loadCards, saveCards } from '@/lib/storage';
+import type { CreditCard, Settings } from '@/lib/types';
+import { loadCards, saveCards, loadSettings, saveSettings } from '@/lib/storage';
 import { CardSidebar } from '@/components/CardSidebar';
 import { CardDetail } from '@/components/CardDetail';
 import { AddCardModal } from '@/components/AddCardModal';
+import { SettingsModal } from '@/components/SettingsModal';
 
 export default function Home() {
   const [cards, setCards] = useState<CreditCard[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [settings, setSettings] = useState<Settings>({ p1Name: 'Me', p2Name: 'Spouse' });
   const [mounted, setMounted] = useState(false);
   const [kvAvailable, setKvAvailable] = useState(false);
   const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -45,6 +48,7 @@ export default function Home() {
       if (loaded.length === 0) loaded = loadCards();
 
       setCards(loaded);
+      setSettings(loadSettings());
       if (loaded.length > 0) setSelectedId(loaded[0].id);
       setMounted(true);
       isInitialLoad.current = false;
@@ -69,6 +73,11 @@ export default function Home() {
     saveCards(cards);
     syncToServer(cards);
   }, [cards, mounted, syncToServer]);
+
+  function handleSaveSettings(updated: Settings) {
+    setSettings(updated);
+    saveSettings(updated);
+  }
 
   function handleAddCard(newCards: CreditCard[]) {
     setCards((prev) => [...prev, ...newCards]);
@@ -128,6 +137,16 @@ export default function Home() {
             <span className="text-xs text-gray-500">{cards.length} card{cards.length !== 1 ? 's' : ''}</span>
           )}
           <button
+            onClick={() => setShowSettings(true)}
+            title="Settings"
+            className="p-1.5 rounded-lg text-gray-500 hover:text-gray-300 hover:bg-[#2a2a2a] transition-colors"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          <button
             onClick={() => setShowAddModal(true)}
             className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-amber-500 text-black font-medium hover:bg-amber-400 transition-colors"
           >
@@ -146,6 +165,7 @@ export default function Home() {
           selectedId={selectedId}
           onSelectId={setSelectedId}
           onAddCard={() => setShowAddModal(true)}
+          settings={settings}
         />
 
         <main className="flex-1 overflow-hidden">
@@ -180,6 +200,7 @@ export default function Home() {
           ) : (
             <CardDetail
               card={selectedCard}
+              settings={settings}
               onUpdateCard={handleUpdateCard}
               onDeleteCard={handleDeleteCard}
             />
@@ -188,7 +209,10 @@ export default function Home() {
       </div>
 
       {showAddModal && (
-        <AddCardModal onAdd={handleAddCard} onClose={() => setShowAddModal(false)} />
+        <AddCardModal settings={settings} onAdd={handleAddCard} onClose={() => setShowAddModal(false)} />
+      )}
+      {showSettings && (
+        <SettingsModal settings={settings} onSave={handleSaveSettings} onClose={() => setShowSettings(false)} />
       )}
     </div>
   );

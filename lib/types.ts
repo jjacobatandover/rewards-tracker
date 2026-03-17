@@ -7,7 +7,12 @@ export type BenefitCategory =
   | 'credit'
   | 'insurance'
   | 'other';
-export type CardHolder = 'me' | 'spouse' | 'both';
+export type CardHolder = 'me' | 'spouse';
+
+export interface Settings {
+  p1Name: string; // displayed instead of "Me"
+  p2Name: string; // displayed instead of "Spouse"
+}
 
 export interface BenefitUsage {
   period: string; // "2026-03" for monthly, "2026" for annual, "used" for once

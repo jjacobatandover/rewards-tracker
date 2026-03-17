@@ -1,63 +1,85 @@
 'use client';
 
 import { useState } from 'react';
-import type { CreditCard, CardHolder, Benefit } from '@/lib/types';
+import type { CreditCard, CardHolder, Benefit, Settings } from '@/lib/types';
 import { CARD_TEMPLATES } from '@/lib/cardData';
 
-interface Selection {
-  holder: CardHolder;
-}
-
 interface Props {
+  settings: Settings;
   onAdd: (cards: CreditCard[]) => void;
   onClose: () => void;
 }
 
-export function AddCardModal({ onAdd, onClose }: Props) {
-  // Map of template name → holder selection (only entries for checked cards)
-  const [selected, setSelected] = useState<Record<string, Selection>>({});
+// 'both' is UI-only — gets expanded to two cards on submit
+type HolderOption = CardHolder | 'both';
+
+export function AddCardModal({ settings, onAdd, onClose }: Props) {
+  const [selected, setSelected] = useState<Record<string, HolderOption>>({});
 
   const checkedNames = Object.keys(selected);
   const count = checkedNames.length;
 
   function toggleCard(name: string) {
     setSelected((prev) => {
-      if (prev[name]) {
+      if (prev[name] !== undefined) {
         const next = { ...prev };
         delete next[name];
         return next;
       }
-      return { ...prev, [name]: { holder: 'me' } };
+      return { ...prev, [name]: 'me' };
     });
   }
 
-  function setHolder(name: string, holder: CardHolder) {
-    setSelected((prev) => ({ ...prev, [name]: { holder } }));
+  function setHolder(name: string, holder: HolderOption) {
+    setSelected((prev) => ({ ...prev, [name]: holder }));
+  }
+
+  function makeCard(templateName: string, holder: CardHolder): CreditCard {
+    const template = CARD_TEMPLATES.find((t) => t.name === templateName)!;
+    const benefits: Benefit[] = template.benefits.map((b) => ({
+      ...b,
+      id: crypto.randomUUID(),
+      usage: [],
+    }));
+    return {
+      id: crypto.randomUUID(),
+      name: template.name,
+      issuer: template.issuer,
+      holder,
+      annualFee: template.annualFee,
+      benefits,
+      color: template.color,
+      officialBenefitsUrl: template.officialBenefitsUrl,
+      lastUpdated: new Date().toISOString(),
+    };
   }
 
   function handleAdd() {
-    const cards: CreditCard[] = checkedNames.map((name) => {
-      const template = CARD_TEMPLATES.find((t) => t.name === name)!;
-      const benefits: Benefit[] = template.benefits.map((b) => ({
-        ...b,
-        id: crypto.randomUUID(),
-        usage: [],
-      }));
-      return {
-        id: crypto.randomUUID(),
-        name: template.name,
-        issuer: template.issuer,
-        holder: selected[name].holder,
-        annualFee: template.annualFee,
-        benefits,
-        color: template.color,
-        officialBenefitsUrl: template.officialBenefitsUrl,
-        lastUpdated: new Date().toISOString(),
-      };
-    });
+    const cards: CreditCard[] = [];
+    for (const name of checkedNames) {
+      const h = selected[name];
+      if (h === 'both') {
+        cards.push(makeCard(name, 'me'));
+        cards.push(makeCard(name, 'spouse'));
+      } else {
+        cards.push(makeCard(name, h as CardHolder));
+      }
+    }
     onAdd(cards);
     onClose();
   }
+
+  const options: { value: HolderOption; label: string }[] = [
+    { value: 'me', label: settings.p1Name },
+    { value: 'spouse', label: settings.p2Name },
+    { value: 'both', label: 'Both' },
+  ];
+
+  // Count actual cards that will be created (both = 2)
+  const cardCount = checkedNames.reduce(
+    (sum, name) => sum + (selected[name] === 'both' ? 2 : 1),
+    0
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
@@ -67,7 +89,9 @@ export function AddCardModal({ onAdd, onClose }: Props) {
           <div>
             <h2 className="text-base font-semibold text-white">Add Credit Cards</h2>
             <p className="text-xs text-gray-500 mt-0.5">
-              {count === 0 ? 'Select one or more cards' : `${count} card${count > 1 ? 's' : ''} selected`}
+              {count === 0
+                ? 'Select one or more cards'
+                : `${count} selected · ${cardCount} card${cardCount !== 1 ? 's' : ''} will be added`}
             </p>
           </div>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-300 transition-colors">
@@ -80,8 +104,8 @@ export function AddCardModal({ onAdd, onClose }: Props) {
         {/* Card list */}
         <div className="overflow-y-auto flex-1 p-3 space-y-1">
           {CARD_TEMPLATES.map((t) => {
-            const isChecked = !!selected[t.name];
-            const holder = selected[t.name]?.holder ?? 'me';
+            const isChecked = selected[t.name] !== undefined;
+            const holder = selected[t.name] ?? 'me';
             return (
               <div
                 key={t.name}
@@ -119,19 +143,19 @@ export function AddCardModal({ onAdd, onClose }: Props) {
                   </span>
                 </button>
 
-                {/* Holder toggle — only active when checked */}
+                {/* Holder toggle */}
                 <div className={`flex gap-1 flex-shrink-0 transition-opacity ${isChecked ? 'opacity-100' : 'opacity-25 pointer-events-none'}`}>
-                  {(['me', 'spouse', 'both'] as CardHolder[]).map((h) => (
+                  {options.map((opt) => (
                     <button
-                      key={h}
-                      onClick={() => setHolder(t.name, h)}
-                      className={`px-2 py-0.5 rounded text-[10px] capitalize border transition-colors ${
-                        holder === h && isChecked
+                      key={opt.value}
+                      onClick={() => setHolder(t.name, opt.value)}
+                      className={`px-2 py-0.5 rounded text-[10px] border transition-colors ${
+                        holder === opt.value && isChecked
                           ? 'bg-amber-500/15 border-amber-500/40 text-amber-400'
                           : 'border-[#333] text-gray-500 hover:border-[#444]'
                       }`}
                     >
-                      {h}
+                      {opt.label}
                     </button>
                   ))}
                 </div>
@@ -153,7 +177,7 @@ export function AddCardModal({ onAdd, onClose }: Props) {
             disabled={count === 0}
             className="flex-1 py-2 rounded-lg text-sm font-medium bg-amber-500 text-black hover:bg-amber-400 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
-            {count === 0 ? 'Add Card' : count === 1 ? 'Add 1 Card' : `Add ${count} Cards`}
+            {cardCount === 0 ? 'Add Card' : `Add ${cardCount} Card${cardCount !== 1 ? 's' : ''}`}
           </button>
         </div>
       </div>
